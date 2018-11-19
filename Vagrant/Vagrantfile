@@ -1,0 +1,30 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# the plugin vagrant-vbguest is mandatory to sync folders through virtualbox
+unless Vagrant.has_plugin?("vagrant-vbguest")
+  raise 'please run "vagrant plugin install vagrant-vbguest" prior to initializing dev environment'
+end
+
+# Vagrantfile API/syntax version. Don't touch unless you know what you're doing!
+VAGRANTFILE_API_VERSION = "2"
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  config.vm.box = "debian/stretch64"
+  config.vm.hostname = "swoole.dev"
+
+  config.vm.provider "virtualbox" do |vb|
+    vb.name = "swoole.dev"
+    vb.customize ["modifyvm", :id, "--memory", "2048"]
+    vb.customize ["modifyvm", :id, "--cpus", "2"]
+  end
+
+  config.vm.network "forwarded_port", host: 9501, guest: 9501, auto_correct:true
+
+  # box has a default config to mount the local dir via rsync, this override prevents an error when rsync is missing on the host
+  config.vm.synced_folder ".", "/vagrant", type: "virtualbox"
+  config.vm.synced_folder "./src", "/var/www/swoole", type: "virtualbox"
+
+  config.vm.provision "shell", path: "provisions.sh"
+  config.vm.provision "shell", inline: "sudo service php-swoole restart > /dev/null 2>&1", run: "always"
+end
